@@ -14,7 +14,7 @@ GitHub账号：QiusuoJC
 
 Project仓库网站：https://github.com/QiusuoJC/Homework_group_28
 
-贡献：去掉重复的Project20，总共21个Project，个人完成了17个
+贡献：去掉重复的Project20，总共21个Project，个人完成了18个
 
 **二、项目完成情况**
 -
