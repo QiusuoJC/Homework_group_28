@@ -1,146 +1,63 @@
-# implement sm2 2P sign with real network communication
-
-## project简介
-
+**Implement sm2 2P sign with real network communication**
+-
+**一、project简介**
+-
 真实网络通信下SM2双方签名的实现。签名实现整体示意图：
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/eb8f6d62-f385-49f1-9d1d-fcbcd4787de6">
 
-## 具体实现
-
-### 实验环境
-
+**二、具体实现**
+-
 基于pycharm编译器导入gmssl库后运行。
 
-### SM2_2P_sign实现
-
-#### 准备
-
-##### 软件环境配置、参数初始化
-
-###### 代码说明
-
+**SM2_2P_sign实现**
+-
 导入自编写文件、库，初始化有限域的阶、椭圆曲线的阶和基本点、圆锥曲线相关参数，由MyFunc.py密钥生成函数生成公私钥对。
 
-###### 代码呈现
-
-```python
-#设置椭圆曲线和有限域的阶
-FIELD_ORDER = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF
-CURVE_ORDER = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
-POINT_X = 0x32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7
-POINT_Y = 0xBC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0
-BASE_POINT = (POINT_X, POINT_Y)
-
-#设置椭圆曲线参数
-CURVE_PARAM_A = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC
-CURVE_PARAM_B = 0x28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93
-
-secret_key, public_key = MF.generate_key()      #调用MF.generate_key()生成密钥对
-```
-
-##### 计算消息的标识符ZA
-
-###### 代码说明
+<img width="448" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/390b9abb-865f-4cb2-a9da-959b3947fd15">
 
 定义函数calculate_ZA，实现对传递参数identifier、椭圆曲线参数a b、G点x y、公钥sk pk的拼接，继而由SM3算法对其进行哈希。
 
-###### 代码呈现
+<img width="447" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/1ba68ec6-e4e8-4288-982e-ac684b9e5a9e">
 
-```python
-def calculate_ZA(identifier, a, b, x, y, sk, pk):
-    entl = str(len(identifier.encode()) << 3)
-    joint = entl + identifier + str(a) + str(b) + str(x) + str(y) + str(sk) + str(pk)
-    joint_bytes = bytes(joint, encoding='utf-8')
-    hash_value = sm3.sm3_hash(func.bytes_to_list(joint_bytes))
-    return int(hash_value, 16)
-```
-
-#### 生成私钥private_key1、private_key2，计算public_key1
-
-###### 流程展示
+**生成私钥private_key1、private_key2，计算public_key1**
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/6c285a2c-34ad-4a5a-9fa9-067624ec2365" width=75% height=75%>
-
-###### 代码思路
 
 1. 由随机数生成器生成私钥private_key1、private_key2
 2. 在发送方计算$public\_key1= private\_key1^{-1}*BASE\_POINT$
 3. 将public_key1发送至接收方
 
-###### 代码呈现
+<img width="426" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/ca6e0825-3172-45d7-ba7b-7183e42200ef">
 
-```python
-if __name__ == '__main__':
-    #生成私钥1、私钥2
-    private_key1 = secrets.randbelow(CURVE_ORDER-1)
-    private_key2 = secrets.randbelow(CURVE_ORDER-1)
-    #生成私钥1、私钥2的乘法逆元
-    private_key1_inverse = MF.calculate_inverse(private_key1, CURVE_ORDER)
-    private_key2_inverse = MF.calculate_inverse(private_key2, CURVE_ORDER)
-    public_key1 = MF.ECC_multiply(private_key1_inverse, BASE_POINT)     #计算公钥1
-    print("private_key1 =", private_key1)
-    print("private_key2 =", private_key2)
-    print("public_key1 =", public_key1)
-```
-
-#### 生成共享公钥shared_public_key
-
-###### 流程展示
+**生成共享公钥shared_public_key**
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/e3d62555-5ab9-4e71-ac55-70e2973ac039" width=40% height=40%>
 
-###### 代码思路
-
 接受方生成随机数private_key2后，计算$shared\_public\_key = private\_key2^{-1}*private\_key1-BASE\_POINT$。shared_public_key为共享公钥，需要公布。
 
-###### 代码呈现
+<img width="467" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/714c3e4d-8962-4dff-a167-0e5ceba71607">
 
-```python
-partial_public_key = MF.ECC_multiply(private_key2_inverse, public_key1)     #计算部分公钥
-    base_point_inverse = [POINT_X, -POINT_Y]
-    shared_public_key = MF.ECC_add(partial_public_key, base_point_inverse)      #计算共享公钥
-    print("shared_public_key =", shared_public_key)
-```
-
-#### 设置计算Z_A为双方标识符,计算e和partial_public_key1并发送至接收方
-
-###### 流程展示
+**设置计算Z_A为双方标识符,计算e和partial_public_key1并发送至接收方**
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/3cde51a2-037f-4bfb-8727-df2f14285dfe" width=50% height=50%>
-
-###### 代码思路
 
 1. 在发送方，利用在准备阶段定义的calculate_ZA函数计算Z_A，并将其级联message哈希得到e。
 2. 生成随机数random_number1，计算$partial\_public\_key1=random\_number1*BASE\_POINT$
 3. 将e和partial_public_key1发送至接收方
 
-###### 代码呈现
+<img width="527" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/0ee2dfb1-8021-46bc-b0ba-e254926b5491">
 
-```python
-identifier = "murphywinter"
-    Z_A = calculate_ZA(identifier, CURVE_PARAM_A, CURVE_PARAM_B, POINT_X, POINT_Y, secret_key, public_key)      #计算标识符Z_A
-    message = b'HelloJason'
-    _message = b''.join([MF.to_byte(i) for i in [Z_A, message]])        #构造消息,将Z_A和消息合并为字节串
-    print("Message sent by murphywinter:", message)
-    e = int.from_bytes(MF.to_byte(sm3.sm3_hash(func.bytes_to_list(_message))), byteorder='big')     #将合并后的消息进行哈希,转换得整数e
-    random_number1 = secrets.randbelow(CURVE_ORDER-1)
-    partial_public_key1 = MF.ECC_multiply(random_number1, BASE_POINT)
-    print("e =", e)
-    print("partial_public_key1 =", partial_public_key1)
-```
 
-#### 计算部分签名r
+**计算部分签名r**
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/f28aa04c-db76-4c9b-bd9a-c9a264d95f38" width=40% height=40%>
 
-###### 代码思路
-
-1. 在接收方随机生成两个随机数random_number2、random_number3
-2. 计算$partial\_public\_key2=random\_number2*BASE\_POINT$
-3. 利用$partial\_public\_key2(combined\_public\_key[0]，y1)=partial\_public\_key3*partial\_public\_key1+partial\_public\_key2$。在combined_public_key[0]后与e相加得到r
-4. 计算$s2=private\_key2 * random\_number2$,$s3=private\_key2 * (r + random\_number1)$
-5. 将r，s2，s3发送至发送方
+1. 接收方在此过程中会先生成两个随机数，分别称为random_number2和random_number3。
+2. 接下来，他们将利用random_number2与基点BASE_POINT进行计算，得到partial_public_key2。
+3. 在接收方的计算过程中，他们会利用partial_public_key2、combined_public_key[0]以及y1等值进行复杂的运算，最终得到变量r的值。这一过程包含了多个步骤，确保了r的安全性。
+4. 同时，接收方还会通过使用private_key2和random_number2来计算变量s2，以及使用private_key2、r和random_number1来计算变量s3。
+5. 最后，接收方将得到的变量r、s2和s3发送回发送方，完成整个流程。
 
 ###### 代码呈现
 
@@ -157,13 +74,9 @@ random_number2 = secrets.randbelow(CURVE_ORDER-1)
     print("s3 =", s3)
 ```
 
-#### 生成签名s=(r,s)
-
-###### 流程展示
+**生成签名s=(r,s)**
 
 <img src="https://github.com/QiusuoJC/homework_group28/assets/104217417/48e3a25d-aba5-4b38-adce-2d76d624929b" width=50% height=50%>
-
-###### 代码思路
 
 1. 发送方接收到r，s2，s3后，计算$s=private\_key1 * random\_number1 * s2 + private\_key1 * s3 - r$
 2. 判断其是否不等于零、是否不等于$CURVE\_ORDER - r$
@@ -177,15 +90,15 @@ s = (private_key1 * random_number1 * s2 + private_key1 * s3 - r) % CURVE_ORDER
         print("s =", s)
 ```
 
-### 输出结果展示
+**输出结果展示**
 
-设定发送方为murphywinter，所发送的消息为HelloJason，则真实网络通信下SM2双方签名实现的输出结果如下所示：
+设定发送方为Alice，所发送的消息为Hello_Bob，则真实网络通信下SM2双方签名实现的输出结果如下所示：
 
-![output](https://github.com/QiusuoJC/homework_group28/assets/104217417/861e17c2-2503-46ff-98b5-b69d476f625a)
+<img width="887" alt="image" src="https://github.com/QiusuoJC/homework_group_28/assets/123710102/f37aa40a-08b2-4a09-b1f7-c2c73e821ae9">
 
-### MyFunc实现
-
-#### 初始化椭圆曲线参数和有限域阶
+**MyFunc实现**
+-
+**初始化椭圆曲线参数和有限域阶**
 
 设置椭圆曲线和有限域的阶、椭圆曲线参数
 
@@ -202,9 +115,7 @@ CURVE_PARAM_A = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFF
 CURVE_PARAM_B = 0x28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93
 ```
 
-#### 构造SM2所需使用的数学函数
-
-##### 基于扩展欧几里得算法求逆
+**基于扩展欧几里得算法求逆**
 
 ```python
 '''基于扩展欧几里得算法求逆'''
@@ -243,7 +154,7 @@ def calculate_inverse(a, b):
             return -1
 ```
 
-##### Tonelli-Shanks求解二次剩余
+**Tonelli-Shanks求解二次剩余**
 
 ```python
 '''Tonelli-Shanks求解二次剩余'''
@@ -281,7 +192,7 @@ def Tonelli_Shanks(y, p):
         return r
 ```
 
-##### 椭圆曲线加法与乘法运算
+**椭圆曲线加法与乘法运算**
 
 基于上述函数，定义椭圆曲线上的加法、乘法运算。
 
@@ -330,7 +241,7 @@ def ECC_multiply(a, b):
     return res
 ```
 
-##### 基于secret库实现密钥生成函数
+**基于secret库实现密钥生成函数**
 
 ```python
 '''基于secret库的密钥生成函数'''
@@ -340,7 +251,7 @@ def generate_key():
     return private_key, public_key
 ```
 
-##### 变量类型转换函数
+**变量类型转换函数**
 
 将变量转换为bytes类型
 
@@ -378,8 +289,10 @@ def to_byte(x, size=None):
 
 ```
 
-## 参考资料
+**三、参考资料**
+-
+【1】<https://blog.csdn.net/qq_51999772/article/details/122642868>
 
-<https://blog.csdn.net/qq_51999772/article/details/122642868>
+【2】<https://blog.csdn.net/qq_43339242/article/details/123221091>
 
-<https://blog.csdn.net/qq_43339242/article/details/123221091>
+【3】上课PPT：SM2
